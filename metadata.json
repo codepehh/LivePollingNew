@@ -1,0 +1,5 @@
+{
+  "name": "Live Poll",
+  "description": "A Mentimeter-like local polling application where an administrator can run a presentation and participants can vote in real-time. State is synchronized across browser tabs using localStorage, allowing for a multi-user simulation on a single machine.",
+  "requestFramePermissions": []
+}
