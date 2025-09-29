@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useLiveState from '../hooks/useLiveState';
-import { getInitialState, generateInitialVotes } from '../constants';
+import { getInitialState, generateInitialVotes, storeQuestions, DEFAULT_QUESTIONS } from '../constants';
 import type { AppState, Question } from '../types';
 import ResultsChart from './ResultsChart';
 import QRCode from './QRCode';
@@ -18,6 +18,11 @@ const AdminView: React.FC = () => {
   const [mode, setMode] = useState<'setup' | 'presentation'>('presentation'); 
   const [editingQuestion, setEditingQuestion] = useState<Question | undefined>(undefined);
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  // Effect to automatically persist question modifications
+  useEffect(() => {
+    storeQuestions(appState.questions);
+  }, [appState.questions]);
 
   const currentQuestion = appState.questions[appState.currentQuestionIndex];
   const totalQuestions = appState.questions.length;
@@ -36,11 +41,28 @@ const AdminView: React.FC = () => {
     }));
   };
 
-  const resetSession = () => {
-    if (window.confirm('Are you sure you want to reset the session? This will restore default questions and clear all votes.')) {
-        setAppState(getInitialState());
+  const resetPoll = () => {
+    if (window.confirm('Are you sure you want to reset the poll? This will clear all votes and return to the first question.')) {
+        setAppState(prev => ({
+            ...prev,
+            currentQuestionIndex: 0,
+            votes: generateInitialVotes(prev.questions),
+        }));
     }
   };
+  
+  const restoreDefaultQuestions = () => {
+    if (window.confirm('Are you sure you want to restore default questions? This will replace all your custom questions.')) {
+        const newQuestions = DEFAULT_QUESTIONS;
+        setAppState(prev => ({
+            ...prev,
+            questions: newQuestions,
+            currentQuestionIndex: 0,
+            votes: generateInitialVotes(newQuestions),
+        }));
+    }
+  };
+
 
   const handleSaveQuestion = (question: Question) => {
     setAppState(prev => {
@@ -54,6 +76,7 @@ const AdminView: React.FC = () => {
         }
         
         const newVotes = generateInitialVotes(newQuestions);
+        // Preserve votes if question IDs and option IDs match
         Object.keys(prev.votes).forEach(qId => {
             if (newVotes[qId]) {
                 Object.keys(prev.votes[qId]).forEach(oId => {
@@ -63,7 +86,6 @@ const AdminView: React.FC = () => {
                 })
             }
         });
-
 
         return {
             ...prev,
@@ -142,9 +164,14 @@ const AdminView: React.FC = () => {
                                 <p className="text-center text-slate-500 py-4">No questions yet. Add one to get started!</p>
                              )}
                         </div>
-                        <Button onClick={() => setIsAddingNew(true)} className="mt-6 w-full">
-                           <Plus className="w-5 h-5 mr-2" /> Add New Question
-                        </Button>
+                        <div className="mt-6 border-t pt-6 space-y-4">
+                            <Button onClick={() => setIsAddingNew(true)} className="w-full">
+                               <Plus className="w-5 h-5 mr-2" /> Add New Question
+                            </Button>
+                             <Button onClick={restoreDefaultQuestions} variant="secondary" className="w-full">
+                                <RefreshCw className="w-5 h-5 mr-2" /> Restore Default Questions
+                            </Button>
+                        </div>
                     </Card>
                 )}
             </div>
@@ -163,7 +190,7 @@ const AdminView: React.FC = () => {
                 <Button variant="secondary"><Home className="w-5 h-5"/></Button>
               </Link>
                <Button variant="secondary" onClick={() => setMode('setup')}><Edit className="w-5 h-5 mr-2" /> Manage Questions</Button>
-              <Button variant="danger" onClick={resetSession}><RefreshCw className="w-5 h-5 mr-2" /> Reset Session</Button>
+              <Button variant="danger" onClick={resetPoll}><RefreshCw className="w-5 h-5 mr-2" /> Reset Poll</Button>
             </div>
         </header>
 

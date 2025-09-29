@@ -1,5 +1,7 @@
 import type { Question, Votes, AppState } from './types';
 
+export const QUESTIONS_STORAGE_KEY = 'live-poll-questions';
+
 export const DEFAULT_QUESTIONS: Question[] = [
   {
     id: 'q1',
@@ -33,6 +35,35 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
 ];
 
+
+// New function to get questions from localStorage
+const getStoredQuestions = (): Question[] => {
+    try {
+      const item = window.localStorage.getItem(QUESTIONS_STORAGE_KEY);
+      if (item) {
+        const questions = JSON.parse(item);
+        // Basic validation that we have an array
+        if (Array.isArray(questions)) {
+            return questions;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading questions from localStorage', error);
+    }
+    // Fallback to default questions if nothing is stored or data is invalid
+    return DEFAULT_QUESTIONS;
+};
+
+// New function to save questions to localStorage
+export const storeQuestions = (questions: Question[]): void => {
+    try {
+        window.localStorage.setItem(QUESTIONS_STORAGE_KEY, JSON.stringify(questions));
+    } catch (error) {
+        console.error('Error writing questions to localStorage', error);
+    }
+};
+
+
 export const generateInitialVotes = (questions: Question[]): Votes => {
   const votes: Votes = {};
   questions.forEach((question) => {
@@ -46,9 +77,13 @@ export const generateInitialVotes = (questions: Question[]): Votes => {
 
 
 export const getInitialState = (): AppState => {
+    const questions = getStoredQuestions();
+    // On first-ever run for a user, this will store the default questions.
+    // On subsequent runs, it just re-stores the loaded questions, which is harmless.
+    storeQuestions(questions);
     return {
-        questions: DEFAULT_QUESTIONS,
+        questions: questions,
         currentQuestionIndex: 0,
-        votes: generateInitialVotes(DEFAULT_QUESTIONS),
+        votes: generateInitialVotes(questions),
     }
 }
